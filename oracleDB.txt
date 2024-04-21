@@ -1,0 +1,59 @@
+CREATE TABLE users (
+    id INTEGER PRIMARY KEY,
+    username VARCHAR2(100),
+    email VARCHAR2(100),
+    phone VARCHAR2(15)
+);
+
+CREATE TABLE categories (
+    id INTEGER PRIMARY KEY,
+    name VARCHAR2(50),
+    description VARCHAR2(250)
+);
+
+CREATE TABLE products (
+    id INTEGER PRIMARY KEY,
+    name VARCHAR2(100),
+    description CLOB,
+    price NUMBER(10, 2),
+    category_id INTEGER,
+    FOREIGN KEY (category_id) REFERENCES categories(id)
+);
+
+CREATE TABLE reviews (
+    id INTEGER PRIMARY KEY,
+    product_id INTEGER,
+    reviewer_id INTEGER,
+    rating INTEGER,
+    comment CLOB,
+    FOREIGN KEY (product_id) REFERENCES products(id),
+    FOREIGN KEY (reviewer_id) REFERENCES users(id)
+);
+
+CREATE TABLE user_preferences (
+    user_id INTEGER PRIMARY KEY,
+    feature VARCHAR2(100),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+CREATE TABLE recommendations (
+    id INTEGER PRIMARY KEY,
+    user_id INTEGER,
+    product_id INTEGER,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (product_id) REFERENCES products(id)
+);
+
+CREATE TABLE purchase_history (
+    id INTEGER PRIMARY KEY,
+    user_id INTEGER,
+    product_id INTEGER,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (product_id) REFERENCES products(id)
+);
+
+CREATE TABLE product_features (
+    product_id INTEGER PRIMARY KEY,
+    feature VARCHAR2(100),
+    FOREIGN KEY (product_id) REFERENCES products(id)
+);

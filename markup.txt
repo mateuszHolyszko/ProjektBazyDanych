@@ -1,0 +1,53 @@
+Table users {
+  id integer [primary key]
+  username varchar
+  email varchar
+  phone varchar
+}
+
+Table product_features {
+  product_id integer [primary key, ref: > products.id]
+  feature varchar
+}
+
+
+Table products {
+  id integer [primary key]
+  name varchar
+  description text
+  price decimal(10, 2)
+  category_id integer [ref: > categories.id]
+}
+
+Table categories {
+  id integer [primary key]
+  name varchar
+  description text
+}
+
+Table reviews {
+  id integer [primary key]
+  product_id integer [ref: > products.id]
+  reviewer_id integer [ref: > users.id]
+  rating integer
+  comment text
+}
+
+
+
+Table user_preferences {
+  user_id integer [primary key, ref: > users.id]
+  feature varchar
+}
+
+Table recommendations {
+  id integer [primary key]
+  user_id integer [ref: > users.id]
+  product_id integer [ref: > products.id]
+}
+
+Table purchase_history {
+  id integer [primary key]
+  user_id integer [ref: > users.id]
+  product_id integer [ref: > products.id]
+}
