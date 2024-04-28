@@ -25,7 +25,7 @@ CREATE TABLE reviews (
     product_id INTEGER,
     reviewer_id INTEGER,
     rating INTEGER,
-    comment CLOB,
+    text_review VARCHAR2(255),
     FOREIGN KEY (product_id) REFERENCES products(id),
     FOREIGN KEY (reviewer_id) REFERENCES users(id)
 );
@@ -57,3 +57,52 @@ CREATE TABLE product_features (
     feature VARCHAR2(100),
     FOREIGN KEY (product_id) REFERENCES products(id)
 );
+==========================
+auto inc:
+CREATE SEQUENCE users_id_seq
+START WITH 1 
+INCREMENT BY 1 
+NOMAXVALUE 
+NOCYCLE;
+
+ALTER TABLE users
+MODIFY id INTEGER DEFAULT users_id_seq.NEXTVAL;
+==========================
+edit feature
+CREATE TABLE features (
+    id INTEGER PRIMARY KEY,
+    feature VARCHAR2(100) NOT NULL UNIQUE
+);
+==
+ALTER TABLE user_preferences
+DROP COLUMN feature;
+
+ALTER TABLE user_preferences
+ADD feature_id INTEGER;
+
+ALTER TABLE user_preferences
+ADD CONSTRAINT fk_user_preferences_feature
+FOREIGN KEY (feature_id)
+REFERENCES features(id);
+==
+ALTER TABLE product_features
+DROP COLUMN feature;
+
+ALTER TABLE product_features
+ADD feature_id INTEGER;
+
+ALTER TABLE product_features
+ADD CONSTRAINT fk_product_features_feature
+FOREIGN KEY (feature_id)
+REFERENCES features(id);
+==========================
+C/app/Mateu/product/21c/
+SYS,SYSTEM,PDBADMIN -> password: 1324
+
+cmd -> sqlplus -> username: sys as sysdba ->password: 1324
+alter session set "_ORACLE_SCRIPT"=true;
+user: mat pass: 1324
+grant all privileges to mat;
+==========================
+to check connection parameters:
+cmd->lsnrctl status: xepdb1 to baza danych
