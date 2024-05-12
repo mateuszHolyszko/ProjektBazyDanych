@@ -189,5 +189,50 @@ class DBoperations:
         # Return the list of categories in the specified format
         return category_list
 
+    def save_purchase_history(self, user_id, product_names):
+        try:
+            for product_name in product_names:
+                # Retrieve the product ID based on the product name
+                self.cursor.execute("SELECT id FROM products WHERE name = :1", (product_name,))
+                product_id = self.cursor.fetchone()[0]
 
+                # Insert the purchase record into the purchase_history table
+                self.cursor.execute("INSERT INTO purchase_history (user_id, product_id) VALUES (:1, :2)", (user_id, product_id))
 
+            # Commit the transaction
+            self.connection.commit()
+
+            return True
+        except Exception as e:
+            print("Error saving purchase history:", e)
+            return False
+
+    def get_purchase_history(self, user_id):
+        try:
+            # Query to retrieve purchase history for the given user
+            query = """
+                    SELECT 
+                        p.name AS product_name,
+                        p.description AS product_description,
+                        p.price,
+                        c.name AS category_name
+                    FROM 
+                        purchase_history ph
+                    JOIN 
+                        products p ON ph.product_id = p.id
+                    JOIN 
+                        categories c ON p.category_id = c.id
+                    WHERE 
+                        ph.user_id = :user_id
+                    """
+            
+            # Execute the query
+            self.cursor.execute(query, {'user_id': user_id})
+
+            # Fetch all rows from the result set
+            purchase_history = self.cursor.fetchall()
+
+            return purchase_history
+        except Exception as e:
+            print("Error retrieving purchase history:", e)
+            return None

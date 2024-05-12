@@ -1,19 +1,28 @@
 import tkinter as tk
 from tkinter import ttk
+from tkinter import messagebox
+from utilities import extract_numerical
 import ast
 
 class BrowseWindow:
-    def __init__(self, master, db_ops):
+    def __init__(self, master, db_ops, user_id):
         self.master = master
         self.db_ops = db_ops
+
+        self.user_id = extract_numerical(str(user_id))
+        print(str(self.user_id))
+
+        # Initialize total_price attribute
+        self.total_price = 0
         
         # Create a new Toplevel window for the browse window
         self.window = tk.Toplevel(master)
-        self.window.title("Browse Products")
+        self.window.title("Browse Products, userId: "+ str(user_id))
+        self.window.minsize(400, 400)
         
         # Create a frame for the browse area
         self.frame = tk.Frame(self.window)
-        self.frame.pack(fill=tk.BOTH, expand=True)
+        self.frame.pack(fill=tk.BOTH, expand=True, side=tk.RIGHT)
         
         # Create a canvas with a scrollbar for scrolling
         self.canvas = tk.Canvas(self.frame)
@@ -24,9 +33,15 @@ class BrowseWindow:
         # Link the canvas and scrollbar
         self.canvas.config(yscrollcommand=self.scrollbar.set)
         
+        # Calculate the center coordinates of the canvas TODO: updet when resize
+        canvas_width = self.canvas.winfo_reqwidth()
+        canvas_height = self.canvas.winfo_reqheight()
+        center_x = canvas_width // 2
+        center_y = canvas_height // 2
+
         # Create a frame inside the canvas to hold the product widgets
         self.inner_frame = tk.Frame(self.canvas)
-        self.inner_frame_id = self.canvas.create_window((0, 0), window=self.inner_frame, anchor='nw')
+        self.inner_frame_id = self.canvas.create_window(center_x, center_y, window=self.inner_frame, anchor='center')
         
         # Bind the Configure event to update the scroll region
         self.inner_frame.bind("<Configure>", self.update_scroll_region)
@@ -38,19 +53,41 @@ class BrowseWindow:
         self.filter_var = tk.StringVar(value="All")
         self.filter_menu = ttk.Combobox(self.window, textvariable=self.filter_var, values=["All"] + self.categories, state="readonly")
         self.filter_menu.pack(pady=10)
-        
-        # Add a button to apply the filter
-        self.filter_button = tk.Button(self.window, text="Filter", command=self.apply_filter)
-        self.filter_button.pack()
-        
-        # Initially display all products
-        self.display_products("All")
 
         #product name filter string #WIPPPPPPPPPPPPPPPPP
         self.product_name_var = tk.StringVar()
 
         self.product_name_entry = tk.Entry(self.window, textvariable=self.product_name_var)
-        self.product_name_entry.pack(pady=5)
+        self.product_name_entry.pack(pady=10)
+        
+        # Add a button to apply the filter
+        self.filter_button = tk.Button(self.window, text="Filter", command=self.apply_filter)
+        self.filter_button.pack()
+
+        ######################## shoping cart START
+         # Create a frame for the shopping cart on the right side
+        self.cart_frame = tk.Frame(self.window, width=200, bd=2, relief=tk.SOLID)
+        self.cart_frame.pack(expand=True, fill=tk.BOTH, side=tk.LEFT)
+
+        # Create a label for the shopping cart title
+        cart_title_label = tk.Label(self.cart_frame, text="Shopping Cart", font=('Helvetica', 12, 'bold'))
+        cart_title_label.pack(pady=5)
+
+        # Create a listbox to display added products in the shopping cart
+        self.cart_listbox = tk.Listbox(self.cart_frame, width=30, height=10)
+        self.cart_listbox.pack(expand=True, fill=tk.BOTH)
+
+        # Create a label to display the total price of the products in the shopping cart
+        self.total_price_label = tk.Label(self.cart_frame, text="Total Price: $0.00", font=('Helvetica', 10))
+        self.total_price_label.pack(pady=5)
+
+        # Create a checkout button
+        self.checkout_button = tk.Button(self.cart_frame, text="Checkout", command=self.checkout)
+        self.checkout_button.pack(pady=5)
+        ######################## shoping cart END
+        
+        # Initially display all products
+        self.display_products("All")
 
 
 
@@ -71,7 +108,7 @@ class BrowseWindow:
             print(dict_['name'])
             print(self.product_name_var.get().lower())
             products = self.db_ops.get_products_by_category(dict_['name'])  # Retrieve products in the selected category
-############################################################################################################################
+############################################################################################################################not working?
             #filter out based on string
             for i, product in enumerate(products):
                 if self.product_name_var.get().lower() not in product['name'].lower():
@@ -95,6 +132,10 @@ class BrowseWindow:
             
             category_label = tk.Label(product_frame, text=product['category'], font=('Helvetica', 10, 'italic'))
             category_label.pack(side=tk.TOP, anchor='w', padx=5, pady=2)
+            
+            # Create a purchase button
+            purchase_button = tk.Button(product_frame, text="Purchase", command=lambda p=product: self.purchase_product(p))
+            purchase_button.pack(side=tk.BOTTOM, anchor='w', padx=5, pady=5)
 
     
     def apply_filter(self):
@@ -103,5 +144,33 @@ class BrowseWindow:
         
         # Display products based on the selected category
         self.display_products(selected_category)
+
+    def purchase_product(self, product):
+        # Add the purchased product to the shopping cart
+        self.cart_listbox.insert(tk.END, product['name'])
+        # Update the total price
+        # Assume product price is stored in 'price' key
+        price = product.get('price', 0)
+        self.total_price += price
+        self.total_price_label.config(text=f"Total Price: ${self.total_price:.2f}")
+
+    def checkout(self):
+        # Perform checkout operation
+        # Retrieve selected product IDs from the cart_listbox
+        selected_product_names = []
+        for i in range(self.cart_listbox.size()):
+            selected_product_names.append(self.cart_listbox.get(i))
+        print(selected_product_names)
+
+        # Save purchase history
+        if self.db_ops.save_purchase_history(self.user_id, selected_product_names):
+            messagebox.showinfo("Checkout", "Checkout completed successfully!")
+            # Clear the cart_listbox after successful checkout
+            self.cart_listbox.delete(0, tk.END)
+            # Reset total price
+            self.total_price = 0
+            self.total_price_label.config(text="Total Price: $0.00")
+        else:
+            messagebox.showerror("Checkout", "Failed to complete checkout!")
 
 

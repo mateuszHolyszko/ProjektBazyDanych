@@ -46,7 +46,7 @@ class LoginWindow:
         user_id = self.db_ops.login(username, password)
         if user_id:
             # Successful login, call the callback function
-            self.on_login_successful()
+            self.on_login_successful(user_id)
             messagebox.showinfo("Login Successful", f"User ID: {user_id}")
         else:
             # Failed login, show error message
