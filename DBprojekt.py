@@ -1,4 +1,5 @@
 from DBoperations import DBoperations
+from RecommendationAlgorithm import RecommendationAlgorithm
 
 # connect to DB
 connection ='mat/1324@localhost:1521/xe'
@@ -10,8 +11,8 @@ db_ops = DBoperations(connection)
 #print(user)
 
 '''
-user_id = 1
-feature_id = 2 #2=Compact
+user_id = 21
+feature_id = 6 
 
 db_ops.link_user_to_feature(user_id, feature_id)
 
@@ -21,8 +22,21 @@ if feature:
 else:
     print(f"No feature linked to user")
 '''
+'''
 #print(db_ops.get_all_products())
 print(db_ops.get_products_by_category("Automation"))
+'''
+# TEST ALGO
+user_id = 21  # Replace with the actual user ID
+rating_threshold = 4  # Set the rating threshold
+recommender = RecommendationAlgorithm(db_ops, user_id, rating_threshold)
+
+# Get recommended product IDs
+recommended_products = recommender.get_recommendations()
+
+# Print the recommended products
+print("Recommended product IDs:", recommended_products)
+
 
 # close DB conn
 db_ops.close_connection()

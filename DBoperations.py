@@ -82,6 +82,23 @@ class DBoperations:
             # avoid partial data insertion
             self.connection.rollback()
 
+    def check_product_feature(self, product_id):
+        query = """
+            SELECT f.feature
+            FROM product_features pf
+            JOIN features f ON pf.feature_id = f.id
+            WHERE pf.product_id = :product_id
+        """
+        self.cursor.execute(query, {'product_id': product_id})
+        
+        feature = self.cursor.fetchone()
+        
+        if feature:
+            return feature[0]
+        else:
+            # If the product does not have a linked feature
+            return None
+
     def login(self, username, password):
         # Define the SQL query to check the username and password in the database
         query = """
@@ -134,6 +151,7 @@ class DBoperations:
     def get_all_products(self):
         query = """
                 SELECT 
+                    p.id AS product_id,
                     p.name AS product_name,
                     p.description AS product_description,
                     p.price,
@@ -152,10 +170,11 @@ class DBoperations:
         
         for product in products:
             product_dict = {
-                'name': product[0],
-                'description': product[1],
-                'price': product[2],
-                'category': product[3]
+                'id': product[0],  # Add the product ID to the dictionary
+                'name': product[1],
+                'description': product[2],
+                'price': product[3],
+                'category': product[4]
             }
             product_list.append(product_dict)
         
@@ -211,7 +230,8 @@ class DBoperations:
         try:
             # Query to retrieve purchase history for the given user
             query = """
-                    SELECT 
+                    SELECT
+                        p.id AS product_id, 
                         p.name AS product_name,
                         p.description AS product_description,
                         p.price,
@@ -236,3 +256,56 @@ class DBoperations:
         except Exception as e:
             print("Error retrieving purchase history:", e)
             return None
+
+    def set_review(self, user_id, product_id, rating, text_review):
+        try:
+            print(f"Prod: {product_id}, USer:{user_id} , Rate:{rating}, Text: {text_review}")
+            query = """
+                INSERT INTO reviews (id, product_id, reviewer_id, rating, text_review) 
+                VALUES (review_seq.NEXTVAL, :product_id, :reviewer_id, :rating, :text_review)
+            """
+            self.cursor.execute(query, {
+                'product_id': product_id,
+                'reviewer_id': user_id,
+                'rating': rating,
+                'text_review': text_review
+            })
+            self.connection.commit()
+            return True
+        except Exception as e:
+            print(f"Error saving review: {e}")
+            return False
+        
+    def get_recommended_products(self, user_id):
+        #WIP
+        return user_id
+    
+    def get_average_rating(self, product_id):
+        try:
+            query = """
+                SELECT AVG(rating) AS average_rating
+                FROM reviews
+                WHERE product_id = :product_id
+            """
+            self.cursor.execute(query, {'product_id': product_id})
+            result = self.cursor.fetchone()
+            return result[0] if result[0] is not None else 0  # Return 0 if there are no ratings
+        except Exception as e:
+            print("Error retrieving average rating:", e)
+            return None
+        
+    def get_text_reviews(self, product_id):
+        try:
+            query = """
+                SELECT text_review
+                FROM reviews
+                WHERE product_id = :product_id
+            """
+            self.cursor.execute(query, {'product_id': product_id})
+            text_reviews = self.cursor.fetchall()
+            return [review[0] for review in text_reviews]  # Return a list of text reviews
+        except Exception as e:
+            print("Error retrieving text reviews:", e)
+            return None
+        
+    

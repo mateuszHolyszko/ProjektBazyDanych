@@ -5,6 +5,7 @@ from ProjectGUI_login import LoginWindow
 from ProjectGUI_mainMenu import MainMenuWindow
 from ProjectGUI_browse import BrowseWindow
 from ProjectGUI_purchaseHistory import PurchaseHistoryWindow
+from ProjectGUI_recommendedWindow import RecommendedWindow
 
 # Initialize the database connection
 connection_string = 'mat/1324@localhost:1521/xe'
@@ -24,6 +25,10 @@ def on_browse(user_id): #WIP +++++++++++++++++++++++++++++
 def on_purchase_history(user_id): #WIP +++++++++++++++++++++++++++++
     purchase_history_window = PurchaseHistoryWindow(root, db_ops, user_id)
     purchase_history_window.window.deiconify()  # Show the purchase history window
+
+def on_recommended(user_id):  #WIP +++++++++++++++++++++++++++++
+    recommended_window = RecommendedWindow(root, db_ops, user_id)
+    recommended_window.window.deiconify()  # Show the recommended window
 
 def on_logout(): #WIP +++++++++++++++++++++++++++++
     messagebox.showinfo("Log Out", "Logged out successfully!")
@@ -45,7 +50,7 @@ def on_login_successful(user_id):
     clear_existing_widgets()
     
     # Show the main menu
-    main_menu_window = MainMenuWindow(root, db_ops, on_browse, on_purchase_history, on_logout, on_exit,user_id)
+    main_menu_window = MainMenuWindow(root, db_ops, on_browse, on_purchase_history, on_recommended, on_logout, on_exit, user_id)
     main_menu_window.show()
 
 def on_exit():

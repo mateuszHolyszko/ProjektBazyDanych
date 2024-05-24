@@ -1,1 +1,3 @@
 install: py -m pip install cx_Oracle
+install: py -m pip install nltk #natural languange toolkit
+install: py -m pip install numpy
