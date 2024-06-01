@@ -1,6 +1,8 @@
 import tkinter as tk
 from tkinter import simpledialog
 from utilities import extract_numerical
+from Kmeans import KMeans
+from collections import Counter
 
 class PurchaseHistoryWindow:
     def __init__(self, master, db_ops, user_id):
@@ -106,3 +108,23 @@ class PurchaseHistoryWindow:
             review_popup.destroy()
         else:
             print("Failed to submit review")
+        # Recalculate feature, reasign if needed =========================================
+        kmeans = KMeans(15)
+        kmeans.fit_from_file("commentGenSamples.txt")
+
+        assigned_feature, assigned_feature_id = kmeans.predict(review_text)
+        assigned_feature_id = assigned_feature_id + 1
+        print(f"\nAssigned Feature: {assigned_feature}, Feature ID: {assigned_feature_id}\n")
+
+        text_reviews = self.db_ops.get_text_reviews(product_id)
+        # Predict features for all reviews
+        predicted_features = [kmeans.predict(review)[1] for review in text_reviews]
+        # Count occurrences of each feature
+        feature_counts = Counter(predicted_features)
+        # Find the most common feature
+        most_common_feature, count = feature_counts.most_common(1)[0]
+        
+        print(f"Most Common Feature for product {product_id}: {most_common_feature + 1} (Count: {count})") #dnt kn why ??
+        print(f"Comment: {review_text}\nAssigned Feature: {most_common_feature + 1}\n")
+
+        self.db_ops.link_feature_to_product(product_id, most_common_feature + 1) #dnt kn why ??

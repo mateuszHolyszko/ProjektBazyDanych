@@ -1,3 +1,4 @@
+#import oracledb as cx_Oracle
 import cx_Oracle
 
 class DBoperations:
@@ -99,6 +100,31 @@ class DBoperations:
             # If the product does not have a linked feature
             return None
 
+    def link_feature_to_product(self, product_id, feature_id):
+        try:
+            # Delete any existing link between the product and a feature
+            self.cursor.execute("""
+                DELETE FROM product_features
+                WHERE product_id = :product_id
+            """, {'product_id': product_id})
+
+            # Insert the new link between the product and the feature
+            self.cursor.execute("""
+                INSERT INTO product_features (product_id, feature_id)
+                VALUES (:product_id, :feature_id)
+            """, {'product_id': product_id, 'feature_id': feature_id})
+            
+            self.connection.commit()
+            print(f"Product {product_id} has been successfully linked to feature {feature_id}.")
+            return True
+        except cx_Oracle.IntegrityError as e:
+            # Handle duplicate or foreign key constraint violation
+            print(f"Failed to link product {product_id} to feature {feature_id}.")
+            print(f"Error: {e}")
+            # Avoid partial data insertion
+            self.connection.rollback()
+            return False
+
     def login(self, username, password):
         # Define the SQL query to check the username and password in the database
         query = """
@@ -123,7 +149,8 @@ class DBoperations:
                     p.name AS product_name,
                     p.description AS product_description,
                     p.price,
-                    c.name AS category_name
+                    c.name AS category_name,
+                    p.id AS id
                 FROM 
                     products p
                 JOIN 
@@ -142,7 +169,8 @@ class DBoperations:
                 'name': product[0],
                 'description': product[1],
                 'price': product[2],
-                'category': product[3]
+                'category': product[3],
+                'id': product[4]
             }
             product_list.append(product_dict)
 
@@ -308,4 +336,4 @@ class DBoperations:
             print("Error retrieving text reviews:", e)
             return None
         
-    
+        

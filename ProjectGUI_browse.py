@@ -134,6 +134,7 @@ class BrowseWindow:
             category_label.pack(side=tk.TOP, anchor='w', padx=5, pady=2)
             
             # Retrieve and display the average rating as stars
+            print(product)
             average_rating = self.db_ops.get_average_rating(product['id'])
             rating_frame = tk.Frame(product_frame)
             rating_frame.pack(side=tk.TOP, anchor='w', padx=5, pady=2)

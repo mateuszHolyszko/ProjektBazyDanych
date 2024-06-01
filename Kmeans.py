@@ -29,6 +29,7 @@ class KMeans:
             "Reliable": ["reliable", "dependable", "consistent", "trustworthy", "steady", "unfailing", "proven", "stable"]
         }
         self.features = list(self.feature_keywords.keys())
+        self.feature_to_id = {feature: i for i, feature in enumerate(self.features)}
         self.keywords = [word for keywords in self.feature_keywords.values() for word in keywords]
 
     def preprocess_text(self, text):
@@ -92,8 +93,11 @@ class KMeans:
         # Assign cluster based on closest centroid
         distances = self._cosine_distances(X, self.centroids)
         label = np.argmin(distances, axis=1)
+        
+        feature = self.features[label[0]]
+        feature_id = self.feature_to_id[feature]
 
-        return self.features[label[0]]
+        return feature, feature_id
 
     def _tfidf_vectorize(self, texts, fit=True):
         # Calculate term frequencies (TF)
@@ -134,12 +138,11 @@ class KMeans:
         return distances
 
 """
-#ex:
 if __name__ == "__main__":
     kmeans = KMeans(n_clusters=15)
     kmeans.fit_from_file("commentGenSamples.txt")
     
-    new_comment = "The ABC Mini Fridge is a compact marvel, perfect for small kitchens or dorm rooms. Its space-saving design doesn't compromise on storage, fitting surprisingly much in a petite footprint. Ideal for those with limited space, this fridge is both practical and stylish."
-    assigned_feature = kmeans.predict(new_comment)
-    print(f"Comment: {new_comment}\nAssigned Feature: {assigned_feature}\n")
+    new_comment = "I love how this device consumes minimal power without compromising performance."
+    assigned_feature, assigned_feature_id = kmeans.predict(new_comment)
+    print(f"Comment: {new_comment}\nAssigned Feature: {assigned_feature}, Feature ID: {assigned_feature_id}\n")
 """

@@ -26,6 +26,8 @@ else:
 #print(db_ops.get_all_products())
 print(db_ops.get_products_by_category("Automation"))
 '''
+
+'''
 # TEST ALGO
 user_id = 21  # Replace with the actual user ID
 rating_threshold = 4  # Set the rating threshold
@@ -36,7 +38,11 @@ recommended_products = recommender.get_recommendations()
 
 # Print the recommended products
 print("Recommended product IDs:", recommended_products)
+'''
+'''
+print(db_ops.link_feature_to_product(113, 1))
 
 
 # close DB conn
 db_ops.close_connection()
+'''

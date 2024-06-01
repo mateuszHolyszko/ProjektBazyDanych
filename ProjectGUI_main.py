@@ -8,7 +8,7 @@ from ProjectGUI_purchaseHistory import PurchaseHistoryWindow
 from ProjectGUI_recommendedWindow import RecommendedWindow
 
 # Initialize the database connection
-connection_string = 'mat/1324@localhost:1521/xe'
+connection_string = 'mat/1324@172.33.5.17:1521/xe'
 db_ops = DBoperations(connection_string)
 
 # Callback function to close the database connection when the application exits
