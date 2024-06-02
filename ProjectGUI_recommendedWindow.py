@@ -207,3 +207,6 @@ class RecommendedWindow:
             self.total_price_label.config(text="Total Price: $0.00")
         else:
             messagebox.showerror("Checkout", "Failed to complete checkout!")
+
+        #update users feature if nessecery
+        self.db_ops.update_user_feature(self.user_id)

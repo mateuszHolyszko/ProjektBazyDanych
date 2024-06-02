@@ -112,3 +112,5 @@ grant all privileges to mat;
 ==========================
 to check connection parameters:
 cmd->lsnrctl status: xepdb1 to baza danych
+
+services.msc -> wl listenera

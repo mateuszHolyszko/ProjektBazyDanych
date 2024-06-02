@@ -203,4 +203,7 @@ class BrowseWindow:
         else:
             messagebox.showerror("Checkout", "Failed to complete checkout!")
 
+        #update users feature if nessecery
+        self.db_ops.update_user_feature(self.user_id)
+
 

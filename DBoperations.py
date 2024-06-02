@@ -69,18 +69,32 @@ class DBoperations:
             
     def link_user_to_feature(self, user_id, feature_id):
         try:
+            # Check if the link already exists
             self.cursor.execute("""
-                INSERT INTO user_preferences (user_id, feature_id)
-                VALUES (:user_id, :feature_id)
+                SELECT * FROM user_preferences
+                WHERE user_id = :user_id AND feature_id = :feature_id
             """, {'user_id': user_id, 'feature_id': feature_id})
+            existing_link = self.cursor.fetchone()
             
-            self.connection.commit()
-            print(f"User {user_id} has been successfully linked to feature {feature_id}.")
-        except cx_Oracle.IntegrityError as e:
-            # Handle duplicate or foreign key constraint violation
-            print(f"Failed to link user {user_id} to feature {feature_id}.")
-            print(f"Error: {e}")
-            # avoid partial data insertion
+            if not existing_link:
+                # Delete the existing feature link if any
+                self.cursor.execute("""
+                    DELETE FROM user_preferences
+                    WHERE user_id = :user_id
+                """, {'user_id': user_id})
+                
+                # Insert the new feature link
+                self.cursor.execute("""
+                    INSERT INTO user_preferences (user_id, feature_id)
+                    VALUES (:user_id, :feature_id)
+                """, {'user_id': user_id, 'feature_id': feature_id})
+                
+                self.connection.commit()
+                print(f"User {user_id} has been successfully linked to feature {feature_id}.")
+            else:
+                print(f"User {user_id} is already linked to feature {feature_id}.")
+        except Exception as e:
+            print(f"Failed to link user {user_id} to feature {feature_id}. Error: {e}")
             self.connection.rollback()
 
     def check_product_feature(self, product_id):
@@ -335,5 +349,53 @@ class DBoperations:
         except Exception as e:
             print("Error retrieving text reviews:", e)
             return None
+
+    def get_feature_id(self, feature):
+        query = """
+            SELECT id
+            FROM features
+            WHERE feature = :feature
+        """
+        self.cursor.execute(query, {'feature': feature})
+        feature_id = self.cursor.fetchone()
+        return feature_id[0] if feature_id else None
+
+    def update_user_feature(self, user_id):
+        # Retrieve the user's purchase history
+        purchase_history = self.get_purchase_history(user_id)
         
+        # Dictionary to count the frequency of each feature
+        feature_count = {}
+        
+        # Iterate over each purchase in the purchase history
+        for purchase in purchase_history:
+            product_id = purchase[0]
+            
+            # Get the feature of the current product
+            feature = self.check_product_feature(product_id)
+            #print(feature)
+
+            if feature:
+                if feature in feature_count:
+                    feature_count[feature] += 1
+                else:
+                    feature_count[feature] = 1
+        
+        # Find the most frequent feature
+        most_frequent_feature = max(feature_count, key=feature_count.get, default=None)
+        
+        if most_frequent_feature:
+            # Get the current feature linked to the user
+            current_feature = self.check_user_feature(user_id)
+            
+            if current_feature != most_frequent_feature:
+                # Get the feature_id for the most frequent feature
+                feature_id = self.get_feature_id(most_frequent_feature)
+                
+                # Link the most frequent feature to the user
+                self.link_user_to_feature(user_id, feature_id)
+                
+                print(f"Updated user {user_id} with the most frequent feature: {most_frequent_feature}")
+
+
         
