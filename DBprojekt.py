@@ -5,7 +5,7 @@ from RecommendationAlgorithm import RecommendationAlgorithm
 connection ='mat/1324@localhost:1521/xe'
 db_ops = DBoperations(connection)
 
-
+db_ops.update_user_feature(21)
 #db_ops.create_user('test', 'test.test@example.com', '0955654321','1324')
 #user = db_ops.read_user(2)
 #print(user)

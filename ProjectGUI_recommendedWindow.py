@@ -83,9 +83,8 @@ class RecommendedWindow:
         recommender = RecommendationAlgorithm(self.db_ops, self.user_id)
         recommended_product_ids = recommender.get_recommendations()
 
-        # Retrieve products by their IDs
-        all_products = self.db_ops.get_all_products()
-        recommended_products = [product for product in all_products if product['id'] in recommended_product_ids]
+        # Retrieve products by their IDs in the recommended order
+        recommended_products = [self.db_ops.get_product_by_id(product_id) for product_id in recommended_product_ids if self.db_ops.get_product_by_id(product_id) is not None]
 
         # Display the top choice product separately
         if recommended_products:

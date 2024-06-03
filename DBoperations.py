@@ -1,401 +1,261 @@
-#import oracledb as cx_Oracle
 import cx_Oracle
 
 class DBoperations:
     def __init__(self, connection_string):
-        # Create a connection to the Oracle database
         self.connection = cx_Oracle.connect(connection_string)
-        # Create a cursor for executing SQL queries
         self.cursor = self.connection.cursor()
+
+    def close_connection(self):
+        # Close the cursor and connection
+        self.cursor.close()
+        self.connection.close()
     
     def create_user(self, username, email, phone, password):
         try:
-            # Insert the new user into the users table with the provided password
-            self.cursor.execute("""
-                INSERT INTO users (username, email, phone, password)
-                VALUES (:username, :email, :phone, :password)
-            """, {'username': username, 'email': email, 'phone': phone, 'password': password})
-            
-            # Commit the transaction
+            self.cursor.callproc("create_user", [username, email, phone, password])
             self.connection.commit()
             print(f"User created successfully.")
         except cx_Oracle.IntegrityError as e:
             print("Failed to create user.")
             print(f"Error: {e}")
-            # Roll back the transaction to avoid partial data insertion
             self.connection.rollback()
-    
+
     def read_user(self, user_id):
-        self.cursor.execute("SELECT * FROM users WHERE id = :id", {'id': user_id})
-        
-        user = self.cursor.fetchone()
-        return user
+        try:
+            out_cursor = self.cursor.var(cx_Oracle.CURSOR)
+            self.cursor.callproc("read_user", [user_id, out_cursor])
+            user = out_cursor.getvalue().fetchone()
+            return user
+        except Exception as e:
+            print(f"Error reading user: {e}")
+            return None
     
     def update_user_email(self, user_id, new_email):
-        self.cursor.execute("""
-            UPDATE users
-            SET email = :email
-            WHERE id = :id
-        """, {'email': new_email, 'id': user_id})
-        
-        self.connection.commit()
-    
-    def delete_user(self, user_id):
-        self.cursor.execute("DELETE FROM users WHERE id = :id", {'id': user_id})
-        
-        self.connection.commit()
-    
-    def close_connection(self):
-        # Close the cursor and connection
-        self.cursor.close()
-        self.connection.close()
+        try:
+            self.cursor.callproc("update_user_email", [user_id, new_email])
+            self.connection.commit()
+        except Exception as e:
+            print(f"Error updating email: {e}")
+            self.connection.rollback()
 
+    def delete_user(self, user_id):
+        try:
+            self.cursor.callproc("delete_user", [user_id])
+            self.connection.commit()
+        except Exception as e:
+            print(f"Error deleting user: {e}")
+            self.connection.rollback()
+    
     def check_user_feature(self, user_id):
-            query = """
-                SELECT f.feature
-                FROM user_preferences up
-                JOIN features f ON up.feature_id = f.id
-                WHERE up.user_id = :user_id
-            """
-            self.cursor.execute(query, {'user_id': user_id})
-            
-            feature = self.cursor.fetchone()
-            
-            if feature:
-                return feature[0]
-            else:
-                # If the user does not have a linked feature
-                return None
+        try:
+            out_cursor = self.cursor.var(cx_Oracle.CURSOR)
+            self.cursor.callproc("check_user_feature", [user_id, out_cursor])
+            feature = out_cursor.getvalue().fetchone()
+            return feature[0] if feature else None
+        except Exception as e:
+            print(f"Error checking user feature: {e}")
+            return None
             
     def link_user_to_feature(self, user_id, feature_id):
         try:
-            # Check if the link already exists
-            self.cursor.execute("""
-                SELECT * FROM user_preferences
-                WHERE user_id = :user_id AND feature_id = :feature_id
-            """, {'user_id': user_id, 'feature_id': feature_id})
-            existing_link = self.cursor.fetchone()
-            
-            if not existing_link:
-                # Delete the existing feature link if any
-                self.cursor.execute("""
-                    DELETE FROM user_preferences
-                    WHERE user_id = :user_id
-                """, {'user_id': user_id})
-                
-                # Insert the new feature link
-                self.cursor.execute("""
-                    INSERT INTO user_preferences (user_id, feature_id)
-                    VALUES (:user_id, :feature_id)
-                """, {'user_id': user_id, 'feature_id': feature_id})
-                
-                self.connection.commit()
-                print(f"User {user_id} has been successfully linked to feature {feature_id}.")
-            else:
-                print(f"User {user_id} is already linked to feature {feature_id}.")
+            self.cursor.callproc("link_user_to_feature", [user_id, feature_id])
+            self.connection.commit()
+            print(f"User {user_id} has been successfully linked to feature {feature_id}.")
         except Exception as e:
             print(f"Failed to link user {user_id} to feature {feature_id}. Error: {e}")
             self.connection.rollback()
 
-    def check_product_feature(self, product_id):
-        query = """
-            SELECT f.feature
-            FROM product_features pf
-            JOIN features f ON pf.feature_id = f.id
-            WHERE pf.product_id = :product_id
-        """
-        self.cursor.execute(query, {'product_id': product_id})
-        
-        feature = self.cursor.fetchone()
-        
-        if feature:
-            return feature[0]
-        else:
-            # If the product does not have a linked feature
+    def get_average_rating(self, product_id):
+        try:
+            avg_rating = self.cursor.var(cx_Oracle.NUMBER)
+            self.cursor.callproc("get_average_rating", [product_id, avg_rating])
+            return avg_rating.getvalue() if avg_rating.getvalue() is not None else 0  # Return 0 if there are no ratings
+        except Exception as e:
+            print(f"Error retrieving average rating: {e}")
             return None
 
+
+        # Check Product Feature
+    def check_product_feature(self, product_id):
+        try:
+            out_cursor = self.cursor.var(cx_Oracle.CURSOR)
+            self.cursor.callproc("check_product_feature", [product_id, out_cursor])
+            feature = out_cursor.getvalue().fetchone()
+            return feature[0] if feature else None
+        except Exception as e:
+            print(f"Error checking product feature: {e}")
+            return None
+
+    # Link Feature to Product
     def link_feature_to_product(self, product_id, feature_id):
         try:
-            # Delete any existing link between the product and a feature
-            self.cursor.execute("""
-                DELETE FROM product_features
-                WHERE product_id = :product_id
-            """, {'product_id': product_id})
-
-            # Insert the new link between the product and the feature
-            self.cursor.execute("""
-                INSERT INTO product_features (product_id, feature_id)
-                VALUES (:product_id, :feature_id)
-            """, {'product_id': product_id, 'feature_id': feature_id})
-            
+            self.cursor.callproc("link_feature_to_product", [product_id, feature_id])
             self.connection.commit()
             print(f"Product {product_id} has been successfully linked to feature {feature_id}.")
             return True
         except cx_Oracle.IntegrityError as e:
-            # Handle duplicate or foreign key constraint violation
-            print(f"Failed to link product {product_id} to feature {feature_id}.")
-            print(f"Error: {e}")
-            # Avoid partial data insertion
+            print(f"Failed to link product {product_id} to feature {feature_id}. Error: {e}")
             self.connection.rollback()
             return False
 
+    # Login
     def login(self, username, password):
-        # Define the SQL query to check the username and password in the database
-        query = """
-            SELECT id
-            FROM users
-            WHERE username = :username AND password = :password
-        """
-        # Execute the query with the entered username and password as parameters
-        self.cursor.execute(query, {'username': username, 'password': password})
-        
-        # Fetch the result (user ID if the credentials are correct)
-        user = self.cursor.fetchone()
-        
-        if user:
-            return user
-        else:            
+        try:
+            out_cursor = self.cursor.var(cx_Oracle.CURSOR)
+            self.cursor.callproc("login", [username, password, out_cursor])
+            user = out_cursor.getvalue().fetchone()
+            return user if user else False
+        except Exception as e:
+            print(f"Error during login: {e}")
             return False
-        
+
+    # Get Products by Category
     def get_products_by_category(self, category):
-        query = """
-                SELECT 
-                    p.name AS product_name,
-                    p.description AS product_description,
-                    p.price,
-                    c.name AS category_name,
-                    p.id AS id
-                FROM 
-                    products p
-                JOIN 
-                    categories c ON p.category_id = c.id
-                WHERE c.name = :category
-                """
+        try:
+            out_cursor = self.cursor.var(cx_Oracle.CURSOR)
+            self.cursor.callproc("get_products_by_category", [category, out_cursor])
+            products = out_cursor.getvalue().fetchall()
+            product_list = [{'name': product[0], 'description': product[1], 'price': product[2], 'category': product[3], 'id': product[4]} for product in products]
+            return product_list
+        except Exception as e:
+            print(f"Error getting products by category: {e}")
+            return []
 
-        self.cursor.execute(query, {'category': category})
-
-        products = self.cursor.fetchall()
-
-        product_list = []
-
-        for product in products:
-            product_dict = {
-                'name': product[0],
-                'description': product[1],
-                'price': product[2],
-                'category': product[3],
-                'id': product[4]
-            }
-            product_list.append(product_dict)
-
-        return product_list
-    
+    # Get All Products
     def get_all_products(self):
-        query = """
-                SELECT 
-                    p.id AS product_id,
-                    p.name AS product_name,
-                    p.description AS product_description,
-                    p.price,
-                    c.name AS category_name
-                FROM 
-                    products p
-                JOIN 
-                    categories c ON p.category_id = c.id
-                """
-        
-        self.cursor.execute(query)
-        
-        products = self.cursor.fetchall()
-        
-        product_list = []
-        
-        for product in products:
-            product_dict = {
-                'id': product[0],  # Add the product ID to the dictionary
-                'name': product[1],
-                'description': product[2],
-                'price': product[3],
-                'category': product[4]
-            }
-            product_list.append(product_dict)
-        
-        return product_list
-    
-    def get_categories(self):
-    # Define the SQL query to retrieve all categories
-        query = """
-            SELECT id, name, description
-            FROM categories
-        """
-        
-        # Execute the query
-        self.cursor.execute(query)
-        
-        # Fetch all results
-        categories = self.cursor.fetchall()
-        
-        # Define a list to hold the formatted results
-        category_list = []
-        
-        # Iterate over the categories and format them in the specified format
-        for category in categories:
-            category_dict = {
-                'id': category[0],
-                'name': category[1],
-                'description': category[2]
-            }
-            category_list.append(category_dict)
-        
-        # Return the list of categories in the specified format
-        return category_list
+        try:
+            out_cursor = self.cursor.var(cx_Oracle.CURSOR)
+            self.cursor.callproc("get_all_products", [out_cursor])
+            products = out_cursor.getvalue().fetchall()
+            product_list = [{'id': product[0], 'name': product[1], 'description': product[2], 'price': product[3], 'category': product[4]} for product in products]
+            return product_list
+        except Exception as e:
+            print(f"Error getting all products: {e}")
+            return []
 
+    # Get Categories
+    def get_categories(self):
+        try:
+            out_cursor = self.cursor.var(cx_Oracle.CURSOR)
+            self.cursor.callproc("get_categories", [out_cursor])
+            categories = out_cursor.getvalue().fetchall()
+            category_list = [{'id': category[0], 'name': category[1], 'description': category[2]} for category in categories]
+            return category_list
+        except Exception as e:
+            print(f"Error getting categories: {e}")
+            return []
+
+    # Save Purchase History
     def save_purchase_history(self, user_id, product_names):
         try:
-            for product_name in product_names:
-                # Retrieve the product ID based on the product name
-                self.cursor.execute("SELECT id FROM products WHERE name = :1", (product_name,))
-                product_id = self.cursor.fetchone()[0]
-
-                # Insert the purchase record into the purchase_history table
-                self.cursor.execute("INSERT INTO purchase_history (user_id, product_id) VALUES (:1, :2)", (user_id, product_id))
-
-            # Commit the transaction
+            # Use cursor.arrayvar to create an array of product names
+            product_names_array = self.cursor.arrayvar(cx_Oracle.STRING, product_names)
+            self.cursor.callproc("save_purchase_history", [user_id, product_names_array])
             self.connection.commit()
-
             return True
         except Exception as e:
-            print("Error saving purchase history:", e)
+            print(f"Error saving purchase history: {e}")
+            self.connection.rollback()
             return False
 
+
+    # Get Purchase History
     def get_purchase_history(self, user_id):
         try:
-            # Query to retrieve purchase history for the given user
-            query = """
-                    SELECT
-                        p.id AS product_id, 
-                        p.name AS product_name,
-                        p.description AS product_description,
-                        p.price,
-                        c.name AS category_name
-                    FROM 
-                        purchase_history ph
-                    JOIN 
-                        products p ON ph.product_id = p.id
-                    JOIN 
-                        categories c ON p.category_id = c.id
-                    WHERE 
-                        ph.user_id = :user_id
-                    """
-            
-            # Execute the query
-            self.cursor.execute(query, {'user_id': user_id})
-
-            # Fetch all rows from the result set
-            purchase_history = self.cursor.fetchall()
-
+            out_cursor = self.cursor.var(cx_Oracle.CURSOR)
+            self.cursor.callproc("get_purchase_history", [user_id, out_cursor])
+            purchase_history = out_cursor.getvalue().fetchall()
             return purchase_history
         except Exception as e:
-            print("Error retrieving purchase history:", e)
-            return None
+            print(f"Error getting purchase history: {e}")
+            return []
 
+    # Set Review
     def set_review(self, user_id, product_id, rating, text_review):
         try:
-            print(f"Prod: {product_id}, USer:{user_id} , Rate:{rating}, Text: {text_review}")
-            query = """
-                INSERT INTO reviews (id, product_id, reviewer_id, rating, text_review) 
-                VALUES (review_seq.NEXTVAL, :product_id, :reviewer_id, :rating, :text_review)
-            """
-            self.cursor.execute(query, {
-                'product_id': product_id,
-                'reviewer_id': user_id,
-                'rating': rating,
-                'text_review': text_review
-            })
+            self.cursor.callproc("set_review", [user_id, product_id, rating, text_review])
             self.connection.commit()
             return True
         except Exception as e:
-            print(f"Error saving review: {e}")
-            return False
-        
-    def get_recommended_products(self, user_id):
-        #WIP
-        return user_id
-    
-    def get_average_rating(self, product_id):
-        try:
-            query = """
-                SELECT AVG(rating) AS average_rating
-                FROM reviews
-                WHERE product_id = :product_id
-            """
-            self.cursor.execute(query, {'product_id': product_id})
-            result = self.cursor.fetchone()
-            return result[0] if result[0] is not None else 0  # Return 0 if there are no ratings
-        except Exception as e:
-            print("Error retrieving average rating:", e)
-            return None
-        
+            print(f"Error setting review: {e}")
+
     def get_text_reviews(self, product_id):
         try:
-            query = """
-                SELECT text_review
-                FROM reviews
-                WHERE product_id = :product_id
-            """
-            self.cursor.execute(query, {'product_id': product_id})
-            text_reviews = self.cursor.fetchall()
+            out_cursor = self.cursor.var(cx_Oracle.CURSOR)
+            self.cursor.callproc("get_text_reviews", [product_id, out_cursor])
+            text_reviews = out_cursor.getvalue().fetchall()
             return [review[0] for review in text_reviews]  # Return a list of text reviews
         except Exception as e:
-            print("Error retrieving text reviews:", e)
+            print(f"Error retrieving text reviews: {e}")
+            return None
+        
+    def get_product_by_id(self, product_id):
+        try:
+            out_cursor = self.cursor.var(cx_Oracle.CURSOR)
+            self.cursor.callproc("get_product_by_id", [product_id, out_cursor])
+            product = out_cursor.getvalue().fetchone()
+            if product:
+                product_dict = {
+                    'id': product[0],
+                    'name': product[1],
+                    'description': product[2],
+                    'price': product[3],
+                    'category': product[4]
+                }
+                return product_dict
+            else:
+                return None
+        except Exception as e:
+            print(f"Error retrieving product by ID: {e}")
             return None
 
     def get_feature_id(self, feature):
-        query = """
-            SELECT id
-            FROM features
-            WHERE feature = :feature
-        """
-        self.cursor.execute(query, {'feature': feature})
-        feature_id = self.cursor.fetchone()
-        return feature_id[0] if feature_id else None
+        try:
+            feature_id = self.cursor.var(cx_Oracle.NUMBER)
+            self.cursor.callproc("get_feature_id", [feature, feature_id])
+            return feature_id.getvalue() if feature_id.getvalue() is not None else None
+        except Exception as e:
+            print(f"Error retrieving feature ID: {e}")
+            return None  
 
     def update_user_feature(self, user_id):
-        # Retrieve the user's purchase history
-        purchase_history = self.get_purchase_history(user_id)
-        
-        # Dictionary to count the frequency of each feature
-        feature_count = {}
-        
-        # Iterate over each purchase in the purchase history
-        for purchase in purchase_history:
-            product_id = purchase[0]
+        try:
+            # Retrieve the user's purchase history
+            purchase_history = self.get_purchase_history(user_id)
             
-            # Get the feature of the current product
-            feature = self.check_product_feature(product_id)
-            #print(feature)
-
-            if feature:
-                if feature in feature_count:
-                    feature_count[feature] += 1
-                else:
-                    feature_count[feature] = 1
-        
-        # Find the most frequent feature
-        most_frequent_feature = max(feature_count, key=feature_count.get, default=None)
-        
-        if most_frequent_feature:
-            # Get the current feature linked to the user
-            current_feature = self.check_user_feature(user_id)
+            # Dictionary to count the frequency of each feature
+            feature_count = {}
             
-            if current_feature != most_frequent_feature:
-                # Get the feature_id for the most frequent feature
-                feature_id = self.get_feature_id(most_frequent_feature)
+            # Iterate over each purchase in the purchase history
+            for purchase in purchase_history:
+                product_id = purchase[0]
                 
-                # Link the most frequent feature to the user
-                self.link_user_to_feature(user_id, feature_id)
+                # Get the feature of the current product
+                feature = self.check_product_feature(product_id)
                 
-                print(f"Updated user {user_id} with the most frequent feature: {most_frequent_feature}")
+                if feature:
+                    if feature in feature_count:
+                        feature_count[feature] += 1
+                    else:
+                        feature_count[feature] = 1
+            
+            # Find the most frequent feature
+            most_frequent_feature = max(feature_count, key=feature_count.get, default=None)
+            
+            if most_frequent_feature:
+                # Get the current feature linked to the user
+                current_feature = self.check_user_feature(user_id)
+                
+                if current_feature != most_frequent_feature:
+                    # Get the feature_id for the most frequent feature
+                    feature_id = self.get_feature_id(most_frequent_feature)
+                    
+                    # Link the most frequent feature to the user
+                    self.link_user_to_feature(user_id, feature_id)
+                    
+                    print(f"Updated user {user_id} with the most frequent feature: {most_frequent_feature}")
+        except Exception as e:
+            print(f"Error updating user feature: {e}")
 
 
-        
+
