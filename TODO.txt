@@ -1,5 +1,0 @@
-actually assign feature to users and products!!!!!!!
-make use of recomendations table, trigger class RecommendationAlgorithm when something changes
-
-based on comments for porducts assign product its feature; go through each review and feature that occurs most commonly is the feature
-based on purchase history assign user his feature; go through each purchase and feature that occurs most commonly is the feature
